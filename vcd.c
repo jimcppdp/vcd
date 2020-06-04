@@ -85,7 +85,16 @@ void parseInst(Parameters*params,Parser*p){
 	if(!strcmp("var",token)){
 		char id_str[4];
 		Channel chan={};
-		fscanf(params->fin," reg %d %3[^ ] %"TXT(MAX_NAME)"[^ $]",&(chan.size),id_str,chan.name);
+		fscanf(params->fin,"%31s", token);
+		if (!strcmp("reg", token)) {
+		  fscanf(params->fin," %d %3[^ ] %"TXT(MAX_NAME)"[^ $]",&(chan.size),id_str,chan.name);
+    		}
+		else if (!strcmp("wire", token)) {
+		  fscanf(params->fin," %d %3[^ ] %"TXT(MAX_NAME)"[^ $]",&(chan.size),id_str,chan.name);
+		}
+    		else {
+      			printf("unknow token : %s\n",token);
+    		}
 		int id=char2id(id_str);
 		p->ch[id]=chan;//printf("size=%i <%c> name=<%s>\n",size,id,data);
 		p->ch[id].scope=p->cur_scopes;
@@ -98,6 +107,7 @@ void parseInst(Parameters*params,Parser*p){
 	else if(!strcmp("upscope",token))       {fscanf(params->fin,"\n%*[^$]");p->cur_scopes=0;}/*back to root */
 	else if(!strcmp("enddefinitions",token)){fscanf(params->fin,"\n%*[^$]");}
 	else if(!strcmp("end",token))           {}
+  	else if(!strcmp("dumpvars",token))      {}
 	else {printf("unknow token : %s\n",token);}
 }
 
