@@ -11,6 +11,13 @@
 #define VAL(A) # A
 #define TXT(A) VAL(A)
 
+//#define SHOW_DEBUG
+#ifdef SHOW_DEBUG 
+#define DEBUG(MSG) MSG;
+#else 
+#define DEBUG(MSG)
+#endif
+
 typedef struct{
 	int width;
 	int verbose;
@@ -64,7 +71,7 @@ void parseArgs(int argc,char**argv,Parameters*params){
 			case 'r':params->round=atoi(argv[i]+3);break;
 			case 'c':params->colsize=atoi(argv[i]+3);break;
 			case 's':params->scope=argv[i]+3;break;
-			default:fprintf(stderr,"unknow param '%c'",argv[i][1]);
+			default:fprintf(stderr,"unknown param '%c'",argv[i][1]);
 		}
 	}
 }
@@ -81,25 +88,25 @@ int char2id(char*str_id){
 void parseInst(Parameters*params,Parser*p){
 	char token[32];
 	fscanf(params->fin,"%31s",token);
-	//printf("%s\n",token);
+	DEBUG(printf("%s token\n",token));
 	if(!strcmp("var",token)){
 		char id_str[4];
 		Channel chan={};
 		fscanf(params->fin,"%31s", token);
 		if (!strcmp("reg", token)) {
 		  fscanf(params->fin," %d %3[^ ] %"TXT(MAX_NAME)"[^ $]",&(chan.size),id_str,chan.name);
-    		}
+    }
 		else if (!strcmp("wire", token)) {
-		  fscanf(params->fin," %d %3[^ ] %"TXT(MAX_NAME)"[^ $]",&(chan.size),id_str,chan.name);
+			fscanf(params->fin," %d %3[^ ] %"TXT(MAX_NAME)"[^ $]",&(chan.size),id_str,chan.name);
 		}
-    		else {
-      			printf("unknow token : %s\n",token);
-    		}
+    else {
+    	DEBUG(printf("unknown token : %s\n",token));
+    }
 		int id=char2id(id_str);
-		p->ch[id]=chan;//printf("size=%i <%c> name=<%s>\n",size,id,data);
+		p->ch[id]=chan; DEBUG(printf("size=%i <%s> name=<%s>\n",chan.size,id_str,chan.name));
 		p->ch[id].scope=p->cur_scopes;
 	}
-	else if(!strcmp("scope",token))         {fscanf(params->fin,"%*127s %127[^ $]",p->scopes[p->cur_scopes=++(p->nb_scopes)]);}
+	else if(!strcmp("scope",token))         {fscanf(params->fin,"%*127s %127[^ $]",p->scopes[p->cur_scopes=++(p->nb_scopes)]); DEBUG(printf("%s scope\n", p->scopes[p->cur_scopes]));}
 	else if(!strcmp("date",token))          {fscanf(params->fin,"\n%31[^$\n]",p->date);}
 	else if(!strcmp("version",token))       {fscanf(params->fin,"\n%31[^$\n]",p->version);}
 	else if(!strcmp("timescale",token))     {fscanf(params->fin,"\n%127[^$\n]",p->scale);}
@@ -107,8 +114,8 @@ void parseInst(Parameters*params,Parser*p){
 	else if(!strcmp("upscope",token))       {fscanf(params->fin,"\n%*[^$]");p->cur_scopes=0;}/*back to root */
 	else if(!strcmp("enddefinitions",token)){fscanf(params->fin,"\n%*[^$]");}
 	else if(!strcmp("end",token))           {}
-  	else if(!strcmp("dumpvars",token))      {}
-	else {printf("unknow token : %s\n",token);}
+	else if(!strcmp("dumpvars",token))      {}
+	else {printf("unknown token : %s\n",token);}
 }
 
 void parseTime(Parameters*params,Parser*p){
@@ -150,11 +157,37 @@ void parseData(Parameters*params,Parser*p){
 		id=char2id(id_str);
 		p->ch[id].type[p->nb-1]=type;
 		p->ch[id].val [p->nb-1]=data;
-	}else{//parsing state %[0-9UZ] %c
+	}else{//parsing state %[0-9UZx] %c
 		fscanf(params->fin,"%3[^\n]",id_str);
+		DEBUG(printf("%s id %c value\n", id_str, c));
 		id=char2id(id_str);
-		if(isalpha(c))p->ch[id].type[p->nb-1]=c;
-		if(isdigit(c))p->ch[id].val [p->nb-1]=c-'0';
+		if(isalpha(c)) {
+			DEBUG(printf("isalpha\n"));
+			p->ch[id].type[p->nb-1]=c;
+		}
+
+		if(isdigit(c)) {
+			DEBUG(printf("isalpha\n"));
+			p->ch[id].val [p->nb-1]=c-'0';
+		}
+
+		if(c=='x') {
+			DEBUG(printf("c is x\n"));
+			p->ch[id].type[p->nb-1]=0;
+			p->ch[id].val [p->nb-1]=2;
+		}
+
+		if(c=='U') {
+			DEBUG(printf("c is U\n"));
+			p->ch[id].type[p->nb-1]=0;
+			p->ch[id].val [p->nb-1]=3;
+		}
+
+		if(c=='Z') {
+			DEBUG(printf("c is Z\n"));
+			p->ch[id].type[p->nb-1]=0;
+			p->ch[id].val [p->nb-1]=4;
+		}
 	}
 }
 
@@ -165,18 +198,18 @@ void parseFile(Parameters*params,Parser*p){
 		if(isspace(c))continue;
 		if(c=='$'){
 			parseInst(params,p);
-		}else if(isdigit(c) || c=='b' || c=='Z' || c=='U'){
+		}else if(isdigit(c) || c=='b' || c=='Z' || c=='U' || c=='x'){
 			ungetc(c,params->fin);
 			parseData(params,p);
 		}else if(c=='#'){
 			parseTime(params,p);
 		}else{
-			fprintf(stderr,"unknow char : %c\n",c);
+			fprintf(stderr,"unknown char : %c\n",c);
 		}
 	}
 }
 
-void showVertical(Parameters*params,Parser*p){
+void showVertical(Parameters *params,Parser *p){
 	int chan,smpl,w;
 	
 	if(p->nb      )fprintf(params->fout,"%i samples",p->nb);
@@ -195,6 +228,7 @@ void showVertical(Parameters*params,Parser*p){
 		for(smpl=0;smpl < p->nb ;smpl++){
 			char     type = p->ch[chan].type[smpl];
 			unsigned data = p->ch[chan].val [smpl];
+			DEBUG(printf("type: %c %d data: %d\n", type, type, data));
 			if(p->ch[chan].size==1){//binary
 				w=params->width;
 				//have a previous data => can print a transition
@@ -207,6 +241,9 @@ void showVertical(Parameters*params,Parser*p){
 				}
 				while(w-->0){
 					if(type)fprintf(params->fout,"%c",type);
+					else if(data==2) fprintf(params->fout,"%c",'X');
+					else if(data==3) fprintf(params->fout,"%c",'U');
+					else if(data==4) fprintf(params->fout,"%c",'Z');
 					else    fprintf(params->fout,"%s",data?"▔":"_");
 				}
 			}else{//bus
