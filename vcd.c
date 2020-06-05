@@ -94,10 +94,10 @@ void parseInst(Parameters*params,Parser*p){
 		Channel chan={};
 		fscanf(params->fin,"%31s", token);
 		if (!strcmp("reg", token)) {
-		  fscanf(params->fin," %d %3[^ ] %"TXT(MAX_NAME)"[^ $]",&(chan.size),id_str,chan.name);
+		  fscanf(params->fin," %d %3[^ ] %"TXT(MAX_NAME)"[^$]",&(chan.size),id_str,chan.name);
     }
 		else if (!strcmp("wire", token)) {
-			fscanf(params->fin," %d %3[^ ] %"TXT(MAX_NAME)"[^ $]",&(chan.size),id_str,chan.name);
+			fscanf(params->fin," %d %3[^ ] %"TXT(MAX_NAME)"[^$]",&(chan.size),id_str,chan.name);
 		}
     else {
     	DEBUG(printf("unknown token : %s\n",token));
